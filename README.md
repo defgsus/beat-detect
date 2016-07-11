@@ -1,3 +1,10 @@
+Attempt to refacture https://github.com/robharper/beat-detect into a useable cross-platform library
+
+early stage..
+
+
+original description:
+
 My Master's Thesis
 ==================
 

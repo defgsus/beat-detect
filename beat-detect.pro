@@ -21,4 +21,4 @@ SOURCES += main.cpp \
 
 HEADERS  += mainwindow.h
 
-
+OTHER_FILES += README.md
