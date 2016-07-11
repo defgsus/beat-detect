@@ -2,26 +2,29 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_BDREALTIMESTAGE_H__3B364512_2B81_400F_9ED2_82CBA8E5B18C__INCLUDED_)
-#define AFX_BDREALTIMESTAGE_H__3B364512_2B81_400F_9ED2_82CBA8E5B18C__INCLUDED_
+#ifndef RDHSRC_BDREALTIMESTAGE_H
+#define RDHSRC_BDREALTIMESTAGE_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#include "AudioStream.h"
+
+RDH_BD_BEGIN_NAMESPACE
 
 class CBDRealTimeStage  
 {
 public:
-	CBDRealTimeStage();
+    CBDRealTimeStage(const BDParamsType& params);
 	virtual ~CBDRealTimeStage();
 
-    HRESULT CreateBeatStream( CDataStream *pStrmIn,         // Onset stream, constant tempo
+    RESULT CreateBeatStream( CDataStream *pStrmIn,         // Onset stream, constant tempo
                               CDataStream *pStrmOut,        // Beat steram, constant tempo
                               CDataStream *pStrmTempo,      // Sampling period, constant tempo
                               CDataStream *pStrmBeatPeriod, // Winning loop period, constant tempo
                               CDataStream *pStrmBeatInfo    // Extra Info
                             );
 
+    BDParamsType m_params;
 };
 
-#endif // !defined(AFX_BDREALTIMESTAGE_H__3B364512_2B81_400F_9ED2_82CBA8E5B18C__INCLUDED_)
+RDH_BD_END_NAMESPACE
+
+#endif // RDHSRC_BDREALTIMESTAGE_H

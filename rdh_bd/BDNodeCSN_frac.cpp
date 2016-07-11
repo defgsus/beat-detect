@@ -1,26 +1,24 @@
+#if 0
 // BDNodeCSN.cpp: implementation of the CBDNodeCSN class.
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
-#include "BeatDetect.h"
+#include <cmath>
+
 #include "BDNodeTimingNet.h"
 #include "BDNodeCSN.h"
-#include <math.h>
 
-#ifdef _DEBUG
-#undef THIS_FILE
-static char THIS_FILE[]=__FILE__;
-#define new DEBUG_NEW
-#endif
+RDH_BD_BEGIN_NAMESPACE
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CBDNodeCSN::CBDNodeCSN( CBDNode * pNode ) : m_pNode(pNode)
+CBDNodeCSN::CBDNodeCSN( CBDNode * pNode )
+    : m_pNode(pNode)
 {
-
+    if (m_pNode)
+        m_params = m_pNode->parameters();
 }
 
 CBDNodeCSN::~CBDNodeCSN()
@@ -29,14 +27,14 @@ CBDNodeCSN::~CBDNodeCSN()
 }
 
 
-HRESULT CBDNodeCSN::Initialize()
+RESULT CBDNodeCSN::Initialize()
 {
     //////
     // CSN
     m_lstLinks.clear();
 
-    m_flCSNOutput = g_BDParams.flCSNMinAct;
-    m_flCSNOutputNew = g_BDParams.flCSNMinAct;
+    m_flCSNOutput = m_params.flCSNMinAct;
+    m_flCSNOutputNew = m_params.flCSNMinAct;
 
     return S_OK;
 }   
@@ -45,7 +43,7 @@ HRESULT CBDNodeCSN::Initialize()
 /////////////
 //CSN Methods
 // Add specified net to link list and calculate link weight
-HRESULT CBDNodeCSN::AddCSNLink
+RESULT CBDNodeCSN::AddCSNLink
 ( 
     CBDNode * pNode
 )
@@ -63,8 +61,8 @@ HRESULT CBDNodeCSN::AddCSNLink
 
         FLOAT flDif = 0.5 - fabs( fmod(flLBig/flLSmall, 1) - 0.5 );
     
-        LinkInfo.flLink = (g_BDParams.flCSNMaxLink-g_BDParams.flCSNMinLink) * pow(1-2*flDif, g_BDParams.flCSNAlpha) 
-                          + g_BDParams.flCSNMinLink;
+        LinkInfo.flLink = (m_params.flCSNMaxLink-m_params.flCSNMinLink) * pow(1-2*flDif, m_params.flCSNAlpha) 
+                          + m_params.flCSNMinLink;
     }
     else
     {
@@ -79,12 +77,12 @@ HRESULT CBDNodeCSN::AddCSNLink
 }
 
 // Remove specified net from link list
-HRESULT CBDNodeCSN::RemoveCSNLink
+RESULT CBDNodeCSN::RemoveCSNLink
 ( 
     CBDNode * pNode
 )
 {
-    HRESULT hr = E_FAIL;
+    RESULT hr = E_FAIL;
 
     for( NodeList::iterator iter = m_lstLinks.begin(); iter != m_lstLinks.end(); iter++ )
     {
@@ -101,7 +99,7 @@ HRESULT CBDNodeCSN::RemoveCSNLink
 }
 
 // Tell all linked nets to remove this net from their lists
-HRESULT CBDNodeCSN::FlushCSNLinks()
+RESULT CBDNodeCSN::FlushCSNLinks()
 {
     for( NodeList::iterator iter = m_lstLinks.begin(); iter != m_lstLinks.end(); iter++ )
     {
@@ -113,14 +111,14 @@ HRESULT CBDNodeCSN::FlushCSNLinks()
 }
 
 
-HRESULT CBDNodeCSN::UpdateCSN
+RESULT CBDNodeCSN::UpdateCSN
 (
     FLOAT flNetEnergy
 )
 {
     //////
     // Decay the activation
-    m_flCSNOutputNew = m_flCSNOutput * g_BDParams.flCSNDecay;
+    m_flCSNOutputNew = m_flCSNOutput * m_params.flCSNDecay;
 
     //////
     // Calculate the linked weighting contributions
@@ -130,8 +128,8 @@ HRESULT CBDNodeCSN::UpdateCSN
         //if( ((*iter)->CSNOutput() > 0) /*&& ((*iter)->Period() < m_pNode->Period())*/ )
         {
             // Calculate link strength
-            FLOAT flLBig = max( (*iter)->Period(), m_pNode->Period() );
-            FLOAT flLSmall = min( (*iter)->Period(), m_pNode->Period() );
+            FLOAT flLBig = std::max( (*iter)->Period(), m_pNode->Period() );
+            FLOAT flLSmall = std::min( (*iter)->Period(), m_pNode->Period() );
 
             // Say we have 24 and 100, we want to find 100/96 (ie the closest integer multiple
             // 24 can make near 100
@@ -141,8 +139,8 @@ HRESULT CBDNodeCSN::UpdateCSN
             FLOAT flDif = 0.5 - fabs( fmod(flFractionalDif, 1) - 0.5 );
             // Calculate function of modulo where flDif should result in link of about 1
             // and flDif >> 0 or flDif << 0 should result in link of about -1
-            FLOAT flLink = (g_BDParams.flCSNMaxLink-g_BDParams.flCSNMinLink) * pow(1-2*flDif, g_BDParams.flCSNAlpha) 
-                              + g_BDParams.flCSNMinLink;
+            FLOAT flLink = (m_params.flCSNMaxLink-m_params.flCSNMinLink) * pow(1-2*flDif, m_params.flCSNAlpha) 
+                              + m_params.flCSNMinLink;
 
             // Calculate the effect of this node on the current node (only positive nodes affect)
             //flCSNChange += flLink * (*iter)->CSNOutput();
@@ -150,26 +148,33 @@ HRESULT CBDNodeCSN::UpdateCSN
         }
     }
     // Add the leaky integrator input to the change
-    flCSNChange += flNetEnergy * g_BDParams.flCSNInputLink;
+    flCSNChange += flNetEnergy * m_params.flCSNInputLink;
 
     //////
     // Weight the activation change by the distance between current value and
     // the max or min allowed activation level
     if( flCSNChange > 0 )
-        flCSNChange *= g_BDParams.flCSNMaxAct - m_flCSNOutput;
+        flCSNChange *= m_params.flCSNMaxAct - m_flCSNOutput;
     else
-        flCSNChange *= m_flCSNOutput - g_BDParams.flCSNMinAct;
+        flCSNChange *= m_flCSNOutput - m_params.flCSNMinAct;
 
     //////
     // Calculate new CSN unit activation
-    m_flCSNOutputNew = BOUND( m_flCSNOutputNew + flCSNChange, g_BDParams.flCSNMinAct, g_BDParams.flCSNMaxAct );
+    m_flCSNOutputNew =
+            std::max(m_params.flCSNMinAct,std::min(m_params.flCSNMaxAct,
+                       m_flCSNOutputNew + flCSNChange ));
 
     return S_OK;
 }
 
 
-HRESULT CBDNodeCSN::CommitCSN()
+RESULT CBDNodeCSN::CommitCSN()
 {
     m_flCSNOutput = m_flCSNOutputNew;
     return S_OK;
 }
+
+
+RDH_BD_END_NAMESPACE
+
+#endif

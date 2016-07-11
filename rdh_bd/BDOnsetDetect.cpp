@@ -2,18 +2,13 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
-#include "BeatDetect.h"
+#include <algorithm>
+
 #include "DSP.h"
 #include "BDOnsetDetect.h"
 #include "BDUtils.h"
 
-#ifdef _DEBUG
-#undef THIS_FILE
-static char THIS_FILE[]=__FILE__;
-#define new DEBUG_NEW
-#endif
-
+RDH_BD_BEGIN_NAMESPACE
 
 // Half-Hanning (Raised Cosine) window
 // 100ms duration at 441Hz sampling rate
@@ -39,7 +34,8 @@ static const INT32 nHalfHanning100ms = 44;
 //
 // ***** Thresholds must be set with some degree of intelligence *****
 //
-CBDOnsetDetect::CBDOnsetDetect()
+CBDOnsetDetect::CBDOnsetDetect(const BDParamsType& params)
+    : m_params      (params)
 {
 
 }
@@ -50,21 +46,21 @@ CBDOnsetDetect::~CBDOnsetDetect()
 }
 
 
-HRESULT CBDOnsetDetect::CreateOnsetStream
+RESULT CBDOnsetDetect::CreateOnsetStream
 (
     CAudioStream *pStrmIn, 
     CDataStream *pStrmOut,
     CDataStream *pStrmInternal
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     pStrmInternal->ReleaseData();
 
     CDataStream StrmDecimated, StrmProcessed;
 
     //////
-    hr = CDSP::RMSDecimate( pStrmIn, &StrmDecimated, pStrmIn->GetSampleRate()/g_BDParams.nOnsetSamplingRate );
+    hr = CDSP::RMSDecimate( pStrmIn, &StrmDecimated, pStrmIn->GetSampleRate()/m_params.nOnsetSamplingRate );
     if( FAILED(hr) )
         return hr;
 
@@ -87,13 +83,13 @@ HRESULT CBDOnsetDetect::CreateOnsetStream
 }
 
 
-HRESULT CBDOnsetDetect::ProcessEnvelope
+RESULT CBDOnsetDetect::ProcessEnvelope
 (
     CDataStream *pStrmIn, 
     CDataStream *pStrmOut
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     //////
     // Calculate onset detection threshold function
@@ -129,7 +125,7 @@ HRESULT CBDOnsetDetect::ProcessEnvelope
 
         // Duxbury/Klapuri
         FLOAT flResult = 0;
-        INT32 iLeftLimit = max(iSam-ENV_STEPS,0);
+        INT32 iLeftLimit = std::max(iSam-ENV_STEPS,0);
         for( INT32 ii=iLeftLimit; ii<iSam; ii++ )
         {
             FLOAT flTemp = (pflDataIn[iSam]-pflDataIn[ii]);
@@ -147,14 +143,14 @@ HRESULT CBDOnsetDetect::ProcessEnvelope
 }
 
 
-HRESULT CBDOnsetDetect::ThresholdStream
+RESULT CBDOnsetDetect::ThresholdStream
 (
     CDataStream *pStrmIn, 
     CDataStream *pStrmEnv,
     CDataStream *pStrmOut
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     enum { ThreshFound, ThreshLooking } eState = ThreshLooking;
 
@@ -169,12 +165,12 @@ HRESULT CBDOnsetDetect::ThresholdStream
     FLOAT * pflEnv = (FLOAT *)pStrmEnv->GetData();
 
     // Calculate minimum distance to pass before another sample may be detected
-    INT32 nSamMinDist = (INT32)(g_BDParams.flOnsetDetectResetTime * pStrmIn->GetSampleRate());
+    INT32 nSamMinDist = (INT32)(m_params.flOnsetDetectResetTime * pStrmIn->GetSampleRate());
 
     INT32 iLastFound = 0;
     for( INT32 iSam=0; iSam<pStrmOut->GetNumSamples(); iSam++ )
     {
-        if( (eState == ThreshLooking) && (pflDataIn[iSam] > g_BDParams.flOnsetDetectThreshHigh) )
+        if( (eState == ThreshLooking) && (pflDataIn[iSam] > m_params.flOnsetDetectThreshHigh) )
         {
             //////
             // Found onset, update state
@@ -195,7 +191,7 @@ HRESULT CBDOnsetDetect::ThresholdStream
 
             pflDataOut[iLastFound] = flEnvMax - pflEnv[iLastFound];
         }
-        else if( (eState == ThreshFound) && ((pflDataIn[iSam] < g_BDParams.flOnsetDetectThreshLow) || 
+        else if( (eState == ThreshFound) && ((pflDataIn[iSam] < m_params.flOnsetDetectThreshLow) || 
                  (iSam > iLastFound+nSamMinDist )) )
         {
             //////
@@ -211,3 +207,5 @@ HRESULT CBDOnsetDetect::ThresholdStream
 
     return hr;
 }
+
+RDH_BD_END_NAMESPACE

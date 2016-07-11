@@ -2,24 +2,20 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
-#include "BeatDetect.h"
+#include <cmath>
+#include <cstring> // memset
+
 #include "BDIOIStatCollector.h"
-#include "BDUtils.h"
 
-#include <math.h>
-
-#ifdef _DEBUG
-#undef THIS_FILE
-static char THIS_FILE[]=__FILE__;
-#define new DEBUG_NEW
-#endif
+RDH_BD_BEGIN_NAMESPACE
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CBDIOIStatCollector::CBDIOIStatCollector() : m_nMaxIOI(0)
+CBDIOIStatCollector::CBDIOIStatCollector(const BDParamsType& p)
+    : m_params  (p)
+    , m_nMaxIOI (0)
 {
 
 }
@@ -30,12 +26,9 @@ CBDIOIStatCollector::~CBDIOIStatCollector()
 }
 
 
-HRESULT     CBDIOIStatCollector::Initialize
-(
-    sIOIStats * pStats
-)
+RESULT CBDIOIStatCollector::Initialize(sIOIStats * pStats)
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     // Reset onset list
     m_lstOnset.clear();
@@ -50,7 +43,7 @@ HRESULT     CBDIOIStatCollector::Initialize
     FLOAT flVar = (FLOAT)(IOISTATS_PARZEN_HALF_WINDOW_SIZE*IOISTATS_PARZEN_HALF_WINDOW_SIZE)/5;
     for( INT32 ii=0; ii<IOISTATS_PARZEN_WINDOW_SIZE; ii++ )
     {
-        FLOAT flx = ii-IOISTATS_PARZEN_HALF_WINDOW_SIZE;
+        FLOAT flx = ii - IOISTATS_PARZEN_HALF_WINDOW_SIZE;
         
         m_aflParzenWindow[ii] = (FLOAT) exp( - flx*flx / flVar );
     }
@@ -59,13 +52,13 @@ HRESULT     CBDIOIStatCollector::Initialize
 }
 
 
-HRESULT     CBDIOIStatCollector::ExecuteStep
+RESULT     CBDIOIStatCollector::ExecuteStep
 ( 
     FLOAT flSample,
     sIOIStats * pStats 
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     m_nLastOnsetDelay += 1;
 
@@ -74,11 +67,11 @@ HRESULT     CBDIOIStatCollector::ExecuteStep
         /////
         // We have received an onset!
 
-        m_nMaxIOI = g_BDParams.flIOIMaxOnsetTime * g_BDParams.nOnsetSamplingRate;
+        m_nMaxIOI = m_params.flIOIMaxOnsetTime * m_params.nOnsetSamplingRate;
         ASSERT( m_nMaxIOI < IOISTATS_HISTLEN );
 
         // Increment onset times by newest IOI
-        for( OnsetList::iterator iter = m_lstOnset.begin(); iter != m_lstOnset.end(); ++iter )
+        for(OnsetList::iterator iter = m_lstOnset.begin(); iter != m_lstOnset.end(); ++iter )
         {
             (*iter) += m_nLastOnsetDelay;
         }
@@ -99,7 +92,7 @@ HRESULT     CBDIOIStatCollector::ExecuteStep
         // Update the IOIStats Histogram
         // Decay Histogram - by amount proportional to passed time
         // m_nLastOnsetDelay*flPeriod equals time passed since last onset
-        FLOAT flDecay = pow(0.5, (m_nLastOnsetDelay/g_BDParams.nOnsetSamplingRate)/g_BDParams.flIOIHistHalflife );
+        FLOAT flDecay = pow(0.5, (m_nLastOnsetDelay/m_params.nOnsetSamplingRate)/m_params.flIOIHistHalflife );
         for( INT32 ii=0; ii < IOISTATS_HISTLEN; ii++ )
         {
             pStats->aflIOIHist[ii] *= flDecay;
@@ -108,11 +101,11 @@ HRESULT     CBDIOIStatCollector::ExecuteStep
 
         // Grow Histogram - inversely proportional to histogram half-life
         // 0.693 = ln2 : FROM SEPPANNEN
-        FLOAT flGrow = 0.693/g_BDParams.flIOIHistHalflife;     
-        for( iter = m_lstOnset.begin(); iter != m_lstOnset.end(); ++iter )
+        FLOAT flGrow = 0.693/m_params.flIOIHistHalflife;
+        for(auto iter = m_lstOnset.begin(); iter != m_lstOnset.end(); ++iter )
         {
             // Use parzen window growth
-            for( INT32 iParzen = max(0,(*iter)-IOISTATS_PARZEN_HALF_WINDOW_SIZE); 
+            for( INT32 iParzen = std::max(0,(*iter)-IOISTATS_PARZEN_HALF_WINDOW_SIZE);
                  iParzen < (*iter) + IOISTATS_PARZEN_HALF_WINDOW_SIZE;
                  iParzen++ )
             {
@@ -123,7 +116,7 @@ HRESULT     CBDIOIStatCollector::ExecuteStep
 
         //////
         // Find Peak IOIs
-        hr = FindDominantIOIs( (FLOAT)1/g_BDParams.nOnsetSamplingRate, pStats );
+        hr = FindDominantIOIs( (FLOAT)1/m_params.nOnsetSamplingRate, pStats );
 
         
         // Reset last delay...
@@ -134,7 +127,7 @@ HRESULT     CBDIOIStatCollector::ExecuteStep
 }
 
 
-HRESULT     CBDIOIStatCollector::FindDominantIOIs
+RESULT     CBDIOIStatCollector::FindDominantIOIs
 ( 
     FLOAT flPeriod,
     sIOIStats * pStats 
@@ -154,12 +147,12 @@ HRESULT     CBDIOIStatCollector::FindDominantIOIs
     flMean /= m_nMaxIOI;
 
     // Threshold as ratio between max and mean
-    FLOAT flThresh = flMax * g_BDParams.flIOIDomThreshRatio + flMean * (1-g_BDParams.flIOIDomThreshRatio);
+    FLOAT flThresh = flMax * m_params.flIOIDomThreshRatio + flMean * (1-m_params.flIOIDomThreshRatio);
 
     // Add IOIs to list that are over threshold
     // Start search at minimum allowed period since should never be that low and simplifies code
-    INT32 nStartIOI = 0.24f * g_BDParams.nOnsetSamplingRate;
-    for( ii=nStartIOI; ii < m_nMaxIOI; ii++ )
+    INT32 nStartIOI = 0.24f * m_params.nOnsetSamplingRate;
+    for(INT32 ii=nStartIOI; ii < m_nMaxIOI; ii++ )
     {
         if( pStats->aflIOIHist[ii] > flThresh )
         {
@@ -188,14 +181,6 @@ HRESULT     CBDIOIStatCollector::FindDominantIOIs
     return S_OK;
 }
 
-
-
-
-
-
-
-
-
-
+RDH_BD_END_NAMESPACE
 
 

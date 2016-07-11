@@ -2,14 +2,14 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_BDNODE_H__A2F21E93_2970_40D4_AE24_E779174D6335__INCLUDED_)
-#define AFX_BDNODE_H__A2F21E93_2970_40D4_AE24_E779174D6335__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef BDHSRC_BDNODE_H
+#define BDHSRC_BDNODE_H
 
 #include <list>
+
+#include "BDUtils.h"
+
+RDH_BD_BEGIN_NAMESPACE
 
 class CBDNode;
 class CBDNodeTimingNet;
@@ -21,16 +21,19 @@ typedef std::list<CBDNode *> NodeList;
 class CBDNode  
 {
 public:
-	CBDNode();
+    CBDNode();
 	virtual ~CBDNode();
 
-    HRESULT     Initialize( FLOAT flPeriod );
+    const BDParamsType& parameters() const { return m_params; }
 
-    HRESULT     ExecuteStep( FLOAT * pflInputBuffer );
-    HRESULT     CommitStep();
+    RESULT      Initialize(const BDParamsType& param, FLOAT flPeriod );
 
-    void        SetIdealPeriod( FLOAT flIdealPeriod )       { m_flIdealPeriod = 0.5f*m_flIdealPeriod + 0.5f*flIdealPeriod; }
-    HRESULT     AdjustPeriod();
+    RESULT      ExecuteStep( FLOAT * pflInputBuffer );
+    RESULT      CommitStep();
+
+    void        SetIdealPeriod( FLOAT flIdealPeriod )
+                { m_flIdealPeriod = 0.5f*m_flIdealPeriod + 0.5f*flIdealPeriod; }
+    RESULT      AdjustPeriod();
 
     // Accessors per sae
     FLOAT       Period() const              { return m_flPeriod; }
@@ -47,7 +50,7 @@ public:
 
     /////////////////////////////////////////////////
     // Performance Measures
-    HRESULT                 CalculatePerformanceMeasures();
+    RESULT                 CalculatePerformanceMeasures();
     BOOL                    m_fSelected;
     FLOAT                   m_flSelectedTime;
     INT32                   m_nBeatReEvaluations;
@@ -57,6 +60,7 @@ public:
     /////////////////////////////////////////////////
 
 protected:
+    BDParamsType            m_params;
     CBDNodeTimingNet    *   m_pNet;
     CBDNodeCSN          *   m_pCSN;
     CBDNodeVarSampler   *   m_pVarSampler;
@@ -66,4 +70,6 @@ protected:
     
 };
 
-#endif // !defined(AFX_BDNODE_H__A2F21E93_2970_40D4_AE24_E779174D6335__INCLUDED_)
+RDH_BD_END_NAMESPACE
+
+#endif // BDHSRC_BDNODE_H

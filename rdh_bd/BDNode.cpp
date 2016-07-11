@@ -2,36 +2,34 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
-#include "BeatDetect.h"
+#include <cmath>
+
 #include "BDNode.h"
 #include "BDNodeTimingNet.h"
 #include "BDNodeCSN.h"
 #include "BDNodeVarSampler.h"
-#include <math.h>
 
-#ifdef _DEBUG
-#undef THIS_FILE
-static char THIS_FILE[]=__FILE__;
-#define new DEBUG_NEW
-#endif
+
+RDH_BD_BEGIN_NAMESPACE
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CBDNode::CBDNode() : m_fSelected(FALSE), m_flPreviousBeatStrength(0)
+CBDNode::CBDNode()
+    : m_fSelected(FALSE)
+    , m_flPreviousBeatStrength(0)
 {
 
 }
 
 CBDNode::~CBDNode()
 {
-    if( NULL != m_pNet )
+    if( nullptr != m_pNet )
         delete m_pNet;
-    if( NULL != m_pCSN )
+    if( nullptr != m_pCSN )
         delete m_pCSN;
-    if( NULL != m_pVarSampler )
+    if( nullptr != m_pVarSampler )
         delete m_pVarSampler;
 }
 
@@ -51,30 +49,29 @@ BOOL CBDNode::LoopComplete()
 }
 
 
-HRESULT CBDNode::Initialize
-( 
-    FLOAT flPeriod 
-)
+RESULT CBDNode::Initialize(const BDParamsType& p, FLOAT flPeriod)
 {
-    HRESULT hr = S_OK;
+    m_params = p;
+
+    RESULT hr = S_OK;
 
     ///////////////////////
     // Create subcomponents
     m_pNet = new CBDNodeTimingNet( this );
-    if( m_pNet == NULL )
+    if( m_pNet == nullptr )
         return E_OUTOFMEMORY;
 
     m_pCSN = new CBDNodeCSN( this );
-    if( m_pCSN == NULL )
+    if( m_pCSN == nullptr )
         return E_OUTOFMEMORY;
 
     m_pVarSampler = new CBDNodeVarSampler( this );
-    if( m_pVarSampler == NULL )
+    if( m_pVarSampler == nullptr )
         return E_OUTOFMEMORY;
     
     /////////////////////////
     // Calculate initial loop length and sampling rate
-    INT32 nLoopLen = (INT32)(flPeriod / g_BDParams.flVarSamplerStartPeriod);
+    INT32 nLoopLen = (INT32)(flPeriod / m_params.flVarSamplerStartPeriod);
     FLOAT flSamplerPeriod = flPeriod / nLoopLen;
     // Set the loop period based on initial stats
     m_flPeriod = nLoopLen * flSamplerPeriod;
@@ -107,12 +104,12 @@ HRESULT CBDNode::Initialize
 }
 
 
-HRESULT CBDNode::ExecuteStep
+RESULT CBDNode::ExecuteStep
 ( 
     FLOAT * pflInputBuffer
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     ///////
     // Pass input to variable sampler
@@ -137,20 +134,20 @@ HRESULT CBDNode::ExecuteStep
         hr = m_pCSN->UpdateCSN( m_pNet->NetEnergy() );
     }
 
-    if( m_fSelected && g_BDParams.fTrackPerformance )
+    if( m_fSelected && m_params.fTrackPerformance )
         m_flSelectedTime++;
 
     return hr;
 }
 
 
-HRESULT CBDNode::CommitStep()
+RESULT CBDNode::CommitStep()
 {
     return m_pCSN->CommitCSN();
 }
 
 
-HRESULT CBDNode::AdjustPeriod
+RESULT CBDNode::AdjustPeriod
 ( 
 )
 {   
@@ -159,7 +156,7 @@ HRESULT CBDNode::AdjustPeriod
     
     //////////////////////////////////////////////////////////////////////
     // PD Period Variation from Ideal Period
-    if( g_BDParams.fEnableVarSampler )
+    if( m_params.fEnableVarSampler )
         // New period is that which is dictated by variable sampler
         flNewPeriod = VarSampler()->IdealSamplePeriod()*m_pNet->LoopLength();
     else
@@ -190,10 +187,12 @@ HRESULT CBDNode::AdjustPeriod
 
 
 
-HRESULT CBDNode::CalculatePerformanceMeasures()
+RESULT CBDNode::CalculatePerformanceMeasures()
 {
     m_flPredictionError /= m_nSelectedBeats;
-    m_flSelectedTime /= g_BDParams.nOnsetSamplingRate;
+    m_flSelectedTime /= m_params.nOnsetSamplingRate;
 
     return S_OK;
 }
+
+RDH_BD_END_NAMESPACE

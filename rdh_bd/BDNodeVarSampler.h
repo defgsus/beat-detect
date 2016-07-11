@@ -2,12 +2,12 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_BDNODEVARSAMPLER_H__7CE2ACC8_8A84_4B07_B0CD_BA395F50F377__INCLUDED_)
-#define AFX_BDNODEVARSAMPLER_H__7CE2ACC8_8A84_4B07_B0CD_BA395F50F377__INCLUDED_
+#ifndef RDHSRC_BDNODEVARSAMPLER_H
+#define RDHSRC_BDNODEVARSAMPLER_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#include "BDUtils.h"
+
+RDH_BD_BEGIN_NAMESPACE
 
 
 class CBDNode;
@@ -19,9 +19,9 @@ public:
 	CBDNodeVarSampler( CBDNode * pNode );
 	virtual ~CBDNodeVarSampler();
 
-    HRESULT     Initialize( FLOAT flSamplerPeriod );
+    RESULT     Initialize( FLOAT flSamplerPeriod );
 
-    HRESULT     ProcessInput( FLOAT * aflInputBuffer, BOOL * pfSampleComplete, FLOAT * pflSample );
+    RESULT     ProcessInput( FLOAT * aflInputBuffer, BOOL * pfSampleComplete, FLOAT * pflSample );
 
     FLOAT &     SamplePeriod()             { return m_flPeriod; }
     FLOAT       IdealSamplePeriod()        { return m_flIdealPeriod; }
@@ -35,8 +35,9 @@ public:
 
 protected:
 
-    HRESULT     AdjustSamplingRate();
+    RESULT     AdjustSamplingRate();
 
+    BDParamsType    m_params;
     FLOAT       m_flPeriod;
 
     // Sampling and Fuzzy Onsets
@@ -62,5 +63,7 @@ protected:
 
     CBDNode *   m_pNode;
 };
+
+RDH_BD_END_NAMESPACE
 
 #endif // !defined(AFX_BDNODEVARSAMPLER_H__7CE2ACC8_8A84_4B07_B0CD_BA395F50F377__INCLUDED_)

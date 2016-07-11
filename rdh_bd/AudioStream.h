@@ -2,13 +2,12 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(_AUDIOSTREAM_H_)
-#define _AUDIOSTREAM_H_
+#ifndef RDHSRC_AUDIOSTREAM_H
+#define RDHSRC_AUDIOSTREAM_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#include "DataStream.h"
 
+RDH_BD_BEGIN_NAMESPACE
 
 class CAudioStream : public CDataStream
 {
@@ -16,14 +15,15 @@ public:
     CAudioStream();
     virtual ~CAudioStream();
     
-    HRESULT LoadFromWaveFile( LPCTSTR lpszFilename );
-    HRESULT SaveToWaveFile( LPCTSTR lpszFilename );
+    RESULT LoadFromWaveFile( const char* );
+    RESULT SaveToWaveFile( const char* );
         
 protected:
 
-    HRESULT LoadReadWaveData( HMMIO hmmioFile, LPMMCKINFO pckInRIFF );
-    HRESULT SaveWriteWaveData( HMMIO hmmioFile );
+    //RESULT LoadReadWaveData( HMMIO hmmioFile, LPMMCKINFO pckInRIFF );
+    //RESULT SaveWriteWaveData( HMMIO hmmioFile );
 };
 
+RDH_BD_END_NAMESPACE
 
-#endif // _AUDIOSTREAM_H_
+#endif // RDHSRC_AUDIOSTREAM_H

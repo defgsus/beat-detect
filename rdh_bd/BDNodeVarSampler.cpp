@@ -2,18 +2,13 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
-#include "BeatDetect.h"
+#include <cmath>
+
 #include "BDNodeVarSampler.h"
 #include "BDNode.h"
 #include "BDNodeTimingNet.h"
-#include <math.h>
 
-#ifdef _DEBUG
-#undef THIS_FILE
-static char THIS_FILE[]=__FILE__;
-#define new DEBUG_NEW
-#endif
+RDH_BD_BEGIN_NAMESPACE
 
 #define ERROR_HIST_LENGTH       5
 #define ERROR_HIST_ALPHA        0.8f
@@ -22,9 +17,11 @@ static char THIS_FILE[]=__FILE__;
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CBDNodeVarSampler::CBDNodeVarSampler( CBDNode * pNode ) : m_pNode(pNode)
+CBDNodeVarSampler::CBDNodeVarSampler( CBDNode * pNode )
+    : m_pNode(pNode)
 {
-
+    if (m_pNode)
+        m_params = m_pNode->parameters();
 }
 
 CBDNodeVarSampler::~CBDNodeVarSampler()
@@ -33,23 +30,23 @@ CBDNodeVarSampler::~CBDNodeVarSampler()
 }
 
 
-HRESULT CBDNodeVarSampler::Initialize
+RESULT CBDNodeVarSampler::Initialize
 ( 
     FLOAT flSamplerPeriod 
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     // Sampler Init
     m_flPeriod = flSamplerPeriod;
     m_flIdealPeriod = flSamplerPeriod;
 
     m_flBeginSam = 0;
-    m_flEndSam = m_flPeriod * g_BDParams.nOnsetSamplingRate;
+    m_flEndSam = m_flPeriod * m_params.nOnsetSamplingRate;
     m_iCurSam = 0;
 
     m_flEnergyRemainder = 0;
-    m_iLastOnset = INT_MIN;
+    m_iLastOnset = -(1<<30);
     m_flLastOnsetEnergy = 0;
     m_flLastBeatTime = 0;
 
@@ -65,14 +62,14 @@ HRESULT CBDNodeVarSampler::Initialize
 }
 
 
-HRESULT CBDNodeVarSampler::ProcessInput
+RESULT CBDNodeVarSampler::ProcessInput
 ( 
     FLOAT * aflInputBuffer,
     BOOL *  pfSampleComplete, 
     FLOAT * pflSample 
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     // Onset?
     if( aflInputBuffer[0] > 0 )
@@ -92,7 +89,7 @@ HRESULT CBDNodeVarSampler::ProcessInput
         /////////////////////////////
         // Calculate fuzzy onset energy
 
-        FLOAT   flFuzzyWidth = g_BDParams.flFuzzyOnsetWidth * g_BDParams.nOnsetSamplingRate / 2;
+        FLOAT   flFuzzyWidth = m_params.flFuzzyOnsetWidth * m_params.nOnsetSamplingRate / 2;
         
         if( m_iLastOnset > m_flBeginSam - flFuzzyWidth )
         {
@@ -145,14 +142,14 @@ HRESULT CBDNodeVarSampler::ProcessInput
         
         /////////////////////////////
         // Variable Sampler Execution
-        HRESULT hrTest = AdjustSamplingRate();
+        RESULT hrTest = AdjustSamplingRate();
         if( hrTest == S_OK )
             m_pNode->AdjustPeriod();
 
         /////////////////////////////
         // Update variables, continue
         m_flBeginSam = m_flEndSam;
-        m_flEndSam += m_flPeriod * g_BDParams.nOnsetSamplingRate;
+        m_flEndSam += m_flPeriod * m_params.nOnsetSamplingRate;
         *pfSampleComplete = TRUE;
     }
     else
@@ -165,11 +162,11 @@ HRESULT CBDNodeVarSampler::ProcessInput
 }
 
 
-HRESULT CBDNodeVarSampler::AdjustSamplingRate
+RESULT CBDNodeVarSampler::AdjustSamplingRate
 ( 
 )
 {
-    HRESULT hr = S_FALSE;
+    RESULT hr = S_FALSE;
 
     // Get the current beat output (remember, we have not yet sent this sample out the door
     //   so the beat output given here corresponds to the current range of samples)
@@ -210,7 +207,7 @@ HRESULT CBDNodeVarSampler::AdjustSamplingRate
             flOffset = fabs(flDist1) < fabs(flDist2) ? flDist1 : flDist2;
         }
         else if( (flSearchDist > (m_flRecentOnset-m_flRecentBeat)) ||
-                 (flSearchDist > (g_BDParams.flVarSamplerMaxErrorTime * g_BDParams.nOnsetSamplingRate)) )
+                 (flSearchDist > (m_params.flVarSamplerMaxErrorTime * m_params.nOnsetSamplingRate)) )
         {
             // Searched too long, time to adjust
             fAdjust = TRUE;
@@ -220,7 +217,7 @@ HRESULT CBDNodeVarSampler::AdjustSamplingRate
 
         //////////////////
         // Time to adjust?
-        if( fAdjust && fabs(flOffset/g_BDParams.nOnsetSamplingRate) < g_BDParams.flVarSamplerMaxErrorTime )
+        if( fAdjust && fabs(flOffset/m_params.nOnsetSamplingRate) < m_params.flVarSamplerMaxErrorTime )
         {
             // Track Performance
             if( m_pNode->m_fSelected )
@@ -240,14 +237,14 @@ HRESULT CBDNodeVarSampler::AdjustSamplingRate
             
             // Calculate expectancy weight            
             // StdDev proportional to loop length
-            FLOAT flStdDev = (m_pNode->Period()*g_BDParams.flExpectationDeviancePercent) * g_BDParams.nOnsetSamplingRate;
-            flStdDev = min( flStdDev, g_BDParams.flExpectationStdDevSamples * m_flPeriod * g_BDParams.nOnsetSamplingRate );
+            FLOAT flStdDev = (m_pNode->Period()*m_params.flExpectationDeviancePercent) * m_params.nOnsetSamplingRate;
+            flStdDev = std::min( flStdDev, m_params.flExpectationStdDevSamples * m_flPeriod * m_params.nOnsetSamplingRate );
             FLOAT flWeight = (FLOAT)exp( - ((flOffset*flOffset)/(flStdDev*flStdDev)) );
             
 
             // Convert offset sample distance into time - use sampling rate of input
             // signal since the # of sample error is at this sampling rate
-            flOffset /= g_BDParams.nOnsetSamplingRate;
+            flOffset /= m_params.nOnsetSamplingRate;
 
             
             // PD Controller Error Input
@@ -261,8 +258,8 @@ HRESULT CBDNodeVarSampler::AdjustSamplingRate
             // Differential Error in seconds error change per sample of the loop
             fldE = (m_flOffset - flLastOffset) / (m_flRecentBeat - m_flLastBeatTime);
             
-            m_flIdealPeriod = (m_flPeriod + flWeight * g_BDParams.flVarSamplerGainProp * flE + 
-                                            sqrt(flWeight*m_flLastExpWeight) * g_BDParams.flVarSamplerGainDiff * fldE);
+            m_flIdealPeriod = (m_flPeriod + flWeight * m_params.flVarSamplerGainProp * flE + 
+                                            sqrt(flWeight*m_flLastExpWeight) * m_params.flVarSamplerGainDiff * fldE);
 
             // Calculate expectation weighting for this period calculation
             //m_flIdealPeriodWeight = sqrt(flWeight*m_flLastExpWeight);
@@ -282,3 +279,4 @@ HRESULT CBDNodeVarSampler::AdjustSamplingRate
 }
 
 
+RDH_BD_END_NAMESPACE

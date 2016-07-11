@@ -2,21 +2,13 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
-#include "BeatDetect.h"
 #include "BDRealTimeStage.h"
 #include "BDIOIStatCollector.h"
 #include "BDNodeControl.h"
 #include "BDNodeVarSampler.h"
-#include "MFileWriter.h"
 #include "BDUtils.h"
 
-#ifdef _DEBUG
-#undef THIS_FILE
-static char THIS_FILE[]=__FILE__;
-#define new DEBUG_NEW
-#endif
-
+RDH_BD_BEGIN_NAMESPACE
 
 #define OUTPUT_ONSETS       0
 #define OUTPUT_ACTUALBEATS  0
@@ -27,7 +19,8 @@ static char THIS_FILE[]=__FILE__;
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CBDRealTimeStage::CBDRealTimeStage()
+CBDRealTimeStage::CBDRealTimeStage(const BDParamsType& p)
+    : m_params      (p)
 {
 
 }
@@ -38,7 +31,7 @@ CBDRealTimeStage::~CBDRealTimeStage()
 }
 
 
-HRESULT CBDRealTimeStage::CreateBeatStream
+RESULT CBDRealTimeStage::CreateBeatStream
 ( 
     CDataStream *pStrmIn,         // Onset stream, constant tempo
     CDataStream *pStrmOut,        // Beat steram, constant tempo
@@ -47,7 +40,7 @@ HRESULT CBDRealTimeStage::CreateBeatStream
     CDataStream *pStrmBeatInfo
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     /////////
     // Debug
@@ -75,7 +68,7 @@ HRESULT CBDRealTimeStage::CreateBeatStream
         return hr;
 
     // Setup Param specifying onset input sampling rate
-    ASSERT( g_BDParams.nOnsetSamplingRate == pStrmIn->GetSampleRate() );
+    ASSERT( m_params.nOnsetSamplingRate == pStrmIn->GetSampleRate() );
 
 
 #if FIND_BEATS
@@ -83,14 +76,14 @@ HRESULT CBDRealTimeStage::CreateBeatStream
     // Components Setup
     sIOIStats   IOIStats;
 
-    CBDIOIStatCollector IOICollector;
+    CBDIOIStatCollector IOICollector(m_params);
     hr = IOICollector.Initialize( &IOIStats );
     if( FAILED(hr) )
         return hr;
 
 
     CBDNodeControl NodeControl;
-    hr = NodeControl.Initialize();
+    hr = NodeControl.Initialize(m_params);
     if( FAILED(hr) )
         return hr;
 
@@ -103,7 +96,7 @@ HRESULT CBDRealTimeStage::CreateBeatStream
     FLOAT * pflSampleBuffer = ((FLOAT *)pStrmIn->GetData());
     // Current input sample #
     INT32 iCurSam = 0;
-    CBDNode * pNodeBest = NULL;
+    CBDNode * pNodeBest = nullptr;
 
     while( iCurSam < pStrmIn->GetNumSamples() )
     {
@@ -111,8 +104,8 @@ HRESULT CBDRealTimeStage::CreateBeatStream
         // Realtime Step
 
         // Track Performance
-        if( !g_BDParams.fTrackPerformance && ((FLOAT)iCurSam/g_BDParams.nOnsetSamplingRate > g_BDParams.flTrackBeginOffset) )
-            g_BDParams.fTrackPerformance = TRUE;
+        if( !m_params.fTrackPerformance && ((FLOAT)iCurSam/m_params.nOnsetSamplingRate > m_params.flTrackBeginOffset) )
+            m_params.fTrackPerformance = TRUE;
 
         
         // IOI Stats Collector - pass in only current sample
@@ -126,13 +119,13 @@ HRESULT CBDRealTimeStage::CreateBeatStream
 
         /////////////////////
         // Update and Output
-        if( NULL != pNodeBest )
+        if( nullptr != pNodeBest )
         {
             // Output Samples
             ((FLOAT *)pStrmOut->GetData())[iCurSam] = pNodeBest->BeatOutput();
-            ((FLOAT *)pStrmTempo->GetData())[iCurSam] = (pNodeBest->VarSampler()->SamplePeriod() - g_BDParams.flVarSamplerStartPeriod)*1000;//(pNodeBest->VarSampler()->SamplePeriod()-g_BDParams.flVarSamplerStartPeriod)*1000;//
+            ((FLOAT *)pStrmTempo->GetData())[iCurSam] = (pNodeBest->VarSampler()->SamplePeriod() - m_params.flVarSamplerStartPeriod)*1000;//(pNodeBest->VarSampler()->SamplePeriod()-m_params.flVarSamplerStartPeriod)*1000;//
             ((FLOAT *)pStrmBeatPeriod->GetData())[iCurSam] = pNodeBest->Period();//pNodeBest->VarSampler()->flE*1000;//pNodeBest->VarSampler()->m_flOffset*100;//
-            ((FLOAT *)pStrmBeatInfo->GetData())[iCurSam] = pNodeBest->LoopComplete()*10;//pNodeBest->VarSampler()->fldE*1000;//(pNodeBest->VarSampler()->IdealSamplePeriod()- g_BDParams.flVarSamplerStartPeriod)*1000;//pNodeBest->CSNOutput();//(pNodeBest->VarSampler()->IdealSamplePeriod() - pNodeBest->VarSampler()->SamplePeriod())*1000;//
+            ((FLOAT *)pStrmBeatInfo->GetData())[iCurSam] = pNodeBest->LoopComplete()*10;//pNodeBest->VarSampler()->fldE*1000;//(pNodeBest->VarSampler()->IdealSamplePeriod()- m_params.flVarSamplerStartPeriod)*1000;//pNodeBest->CSNOutput();//(pNodeBest->VarSampler()->IdealSamplePeriod() - pNodeBest->VarSampler()->SamplePeriod())*1000;//
         }
         else
         {
@@ -161,7 +154,7 @@ HRESULT CBDRealTimeStage::CreateBeatStream
 
     ///////////////////////////////////////////////////
     // Calculate Performance Measures
-    if( (NULL != pNodeBest) )
+    if( (nullptr != pNodeBest) )
     {
         CBDNode * pNodeLongest = pNodeBest;
         for( NodeList::iterator iNode = NodeControl.m_lstNodes.begin(); 
@@ -175,18 +168,21 @@ HRESULT CBDRealTimeStage::CreateBeatStream
         }
         pNodeLongest->CalculatePerformanceMeasures();
 
+#ifdef XXX
         if( !((CBeatDetectApp *)AfxGetApp())->m_fAutomate )
         {
             FLOAT flBMP = 60/pNodeLongest->m_flAvgPeriod;
-            FLOAT flPercentTime = pNodeLongest->m_flSelectedTime / (pStrmIn->GetDuration() - g_BDParams.flTrackBeginOffset);
+            FLOAT flPercentTime = pNodeLongest->m_flSelectedTime / (pStrmIn->GetDuration() - m_params.flTrackBeginOffset);
             CString strMsg;
-            strMsg.Format( "%% Time = %.2f\n%.2f BPM\n%.2f Error\n%d Beat Re-eval\n%d Node Changes", flPercentTime*100, flBMP, sqrt(pNodeLongest->m_flPredictionError), pNodeLongest->m_nBeatReEvaluations, g_BDParams.nTrackChangeNode );
+            strMsg.Format( "%% Time = %.2f\n%.2f BPM\n%.2f Error\n%d Beat Re-eval\n%d Node Changes", flPercentTime*100, flBMP, sqrt(pNodeLongest->m_flPredictionError), pNodeLongest->m_nBeatReEvaluations, m_params.nTrackChangeNode );
             AfxMessageBox( strMsg );
         }
+#endif
     }
 
     ///////////////////////////////////////////////////
 
+#if 0
     CMFileWriter<TimingLoopList> MWriter2;
     MWriter2.Open( "Beats.m", TRUE );
     //MWriter2.WriteFloatArray( "SamplePeriod", (FLOAT *)pStrmTempo->GetData(), pStrmTempo->GetNumSamples() );
@@ -195,6 +191,7 @@ HRESULT CBDRealTimeStage::CreateBeatStream
     //MWriter2.WriteFloatArray( "BeatInfo", (FLOAT *)pStrmBeatInfo->GetData(), pStrmBeatInfo->GetNumSamples() );
     //MWriter2.WriteTimingLoops( NodeControl.m_lstNodes );
     MWriter2.Close();
+#endif
 #endif
 
 
@@ -214,3 +211,5 @@ HRESULT CBDRealTimeStage::CreateBeatStream
 
     return hr;
 }
+
+RDH_BD_END_NAMESPACE

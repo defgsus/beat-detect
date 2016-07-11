@@ -2,18 +2,16 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_BDTIMINGNETCONTROL_H__599C3681_5B9D_45EB_B524_8D670CD74283__INCLUDED_)
-#define AFX_BDTIMINGNETCONTROL_H__599C3681_5B9D_45EB_B524_8D670CD74283__INCLUDED_
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef BDHSRC_BDNODECONTROL_H
+#define BDHSRC_BDNODECONTROL_H
 
 
 #include <list>
+
 #include "BDNode.h"
 #include "BDIOIStatCollector.h"
 
-
+RDH_BD_BEGIN_NAMESPACE
 
 class CBDNodeControl  
 {
@@ -21,16 +19,17 @@ public:
 	CBDNodeControl();
 	virtual ~CBDNodeControl();
 
-    HRESULT     Initialize();
-    HRESULT     ExecuteStep( FLOAT * pflInputBuffer, sIOIStats *pStats );
+    RESULT     Initialize(const BDParamsType& params);
+    RESULT     ExecuteStep( FLOAT * pflInputBuffer, sIOIStats *pStats );
 
     CBDNode   * BestNode()                  { return m_pNodeBest; }
 
     NodeList        m_lstNodes;
 
 protected:
-    HRESULT     AddNode( FLOAT flNodePeriod );
+    RESULT     AddNode( FLOAT flNodePeriod );
 
+    BDParamsType    m_params;
     CBDNode *       m_pNodeBest;
     // Option 1 (also required for 2)
     FLOAT           m_flMaxCSN;
@@ -39,4 +38,6 @@ protected:
 
 };
 
-#endif // !defined(AFX_BDTIMINGNETCONTROL_H__599C3681_5B9D_45EB_B524_8D670CD74283__INCLUDED_)
+RDH_BD_END_NAMESPACE
+
+#endif // BDHSRC_BDNODECONTROL_H

@@ -2,35 +2,38 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_BDONSETSTAGE_H__17671C69_C882_4CB8_997E_CA3C04DAC347__INCLUDED_)
-#define AFX_BDONSETSTAGE_H__17671C69_C882_4CB8_997E_CA3C04DAC347__INCLUDED_
+#ifndef RDHSRC_BDONSETSTAGE_H
+#define RDHSRC_BDONSETSTAGE_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#include "AudioStream.h"
 
+RDH_BD_BEGIN_NAMESPACE
 
-#define     NUM_BANDS       8  //9
+static const int NUM_BANDS = 8;
 
 class CBDOnsetStage  
 {
 public:
-	CBDOnsetStage();
+    CBDOnsetStage(const BDParamsType& params);
 	virtual ~CBDOnsetStage();
 
-    HRESULT CreateOnsetStream( CAudioStream *pStrmIn, CDataStream *pStrmOut, CDataStream *pStrmInternal );
+    RESULT CreateOnsetStream(
+            CAudioStream *pStrmIn, CDataStream *pStrmOut, CDataStream *pStrmInternal );
 
 protected:
     // Split the input signal into its separate frequency bands
-    HRESULT BandSplitInput( CAudioStream *pStrmIn );
+    RESULT BandSplitInput( CAudioStream *pStrmIn );
     // Reassemble onset streams into one output stream
-    HRESULT ReassembleOnsets( CDataStream *pStrmOut );
-
+    RESULT ReassembleOnsets( CDataStream *pStrmOut );
 
 protected:
+    BDParamsType    m_params;
+
     CAudioStream    m_aStrmBandInput[NUM_BANDS];
     CDataStream     m_aStrmOnset[NUM_BANDS];
 
 };
 
-#endif // !defined(AFX_BDONSETSTAGE_H__17671C69_C882_4CB8_997E_CA3C04DAC347__INCLUDED_)
+RDH_BD_END_NAMESPACE
+
+#endif // RDHSRC_BDONSETSTAGE_H

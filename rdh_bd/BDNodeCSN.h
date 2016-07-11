@@ -2,17 +2,13 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_BDNODECSN_H__5E0E5B73_4531_4FD5_86C2_EC57CDBA925F__INCLUDED_)
-#define AFX_BDNODECSN_H__5E0E5B73_4531_4FD5_86C2_EC57CDBA925F__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef BDHSRC_NODECSN_H
+#define BDHSRC_NODECSN_H
 
 
 #include "BDNode.h"
 
-
+RDH_BD_BEGIN_NAMESPACE
 
 class CBDNodeCSN  
 {
@@ -20,19 +16,20 @@ public:
 	CBDNodeCSN( CBDNode * pNode );
 	virtual ~CBDNodeCSN();
 
-    HRESULT     Initialize();
+    RESULT     Initialize();
 
-    HRESULT     AddCSNLink( CBDNode * pNode );
-    HRESULT     RemoveCSNLink( CBDNode * pNode );
-    HRESULT     FlushCSNLinks();
+    RESULT     AddCSNLink( CBDNode * pNode );
+    RESULT     RemoveCSNLink( CBDNode * pNode );
+    RESULT     FlushCSNLinks();
 
-    HRESULT     UpdateCSN( FLOAT flNetEnergy );
-    HRESULT     CommitCSN();
+    RESULT     UpdateCSN( FLOAT flNetEnergy );
+    RESULT     CommitCSN();
 
     FLOAT       CSNOutput() const       { return m_flCSNOutput; }
 
 
 protected:
+    BDParamsType        m_params;
     NodeList            m_lstLinks;
 
     FLOAT               m_flCSNOutput;
@@ -41,4 +38,6 @@ protected:
     CBDNode           * m_pNode;
 };
 
-#endif // !defined(AFX_BDNODECSN_H__5E0E5B73_4531_4FD5_86C2_EC57CDBA925F__INCLUDED_)
+RDH_BD_END_NAMESPACE
+
+#endif // BDHSRC_NODECSN_H

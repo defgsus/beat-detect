@@ -2,11 +2,9 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
-#include <mmsystem.h> 
-#include "DataStream.h"
 #include "AudioStream.h"
 
+RDH_BD_BEGIN_NAMESPACE
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -21,24 +19,21 @@ CAudioStream::~CAudioStream()
 }
 
 
-HRESULT CAudioStream::LoadFromWaveFile
-( 
-  LPCTSTR lpszFilename
-)
+RESULT CAudioStream::LoadFromWaveFile(const char*)
 {
-    HRESULT hr = S_OK;
-
+    RESULT hr = S_OK;
+#if 0
     // Cannot load wave file if memory already allocated for another wave
-    if( NULL != m_pData )
+    if( nullptr != m_pData )
         return E_FAIL;
 
-    HMMIO hmmioFile = mmioOpen( (LPTSTR)lpszFilename, NULL, MMIO_ALLOCBUF | MMIO_READ );
-    if( hmmioFile == NULL )
+    HMMIO hmmioFile = mmioOpen( (LPTSTR)lpszFilename, nullptr, MMIO_ALLOCBUF | MMIO_READ );
+    if( hmmioFile == nullptr )
         return E_FAIL;
 
     // Read main RIFF
     MMCKINFO ckInRIFF;
-    if( mmioDescend(hmmioFile, &ckInRIFF, NULL, 0) == 0 ) 
+    if( mmioDescend(hmmioFile, &ckInRIFF, nullptr, 0) == 0 )
     {
         // Check Type
         if( (ckInRIFF.ckid == FOURCC_RIFF) &&
@@ -102,23 +97,23 @@ HRESULT CAudioStream::LoadFromWaveFile
     }
 
     // Close File
-    if (hmmioFile != NULL) 
+    if (hmmioFile != nullptr)
     { 
         mmioClose(hmmioFile, 0); 
-        hmmioFile = NULL; 
+        hmmioFile = nullptr;
     }
-
+#endif
     return hr;
 }
 
-
-HRESULT CAudioStream::LoadReadWaveData
+#if 0
+RESULT CAudioStream::LoadReadWaveData
 ( 
   HMMIO hmmioFile, 
   LPMMCKINFO pckInRIFF
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     // Descend into data chunk
     MMCKINFO ckIn;
@@ -130,7 +125,7 @@ HRESULT CAudioStream::LoadReadWaveData
         {
             // Allocate Buffer
             m_pData = new BYTE[ckIn.cksize];
-            if( m_pData != NULL )
+            if( m_pData != nullptr )
             {
                 // Copy all the data bytes
                 for (unsigned int cT = 0; cT < ckIn.cksize; cT++) 
@@ -182,21 +177,18 @@ HRESULT CAudioStream::LoadReadWaveData
 
     return hr;
 }
+#endif
 
-
-HRESULT CAudioStream::SaveToWaveFile
-( 
-  LPCTSTR lpszFilename 
-)
+RESULT CAudioStream::SaveToWaveFile(const char*)
 {
-    HRESULT hr = S_OK;
-    
+    RESULT hr = S_OK;
+#if 0
     // If no data, cannot save
-    if( NULL == m_pData )
+    if( nullptr == m_pData )
         return E_FAIL;
     
-    HMMIO hmmioFile = mmioOpen( (LPTSTR)lpszFilename, NULL, MMIO_ALLOCBUF | MMIO_WRITE | MMIO_CREATE );
-    if( hmmioFile == NULL )
+    HMMIO hmmioFile = mmioOpen( (LPTSTR)lpszFilename, nullptr, MMIO_ALLOCBUF | MMIO_WRITE | MMIO_CREATE );
+    if( hmmioFile == nullptr )
         return E_FAIL;
     
     MMCKINFO ckOutRiff;
@@ -258,22 +250,23 @@ HRESULT CAudioStream::SaveToWaveFile
     }
 
     // Close the final file.
-    if( hmmioFile != NULL )
+    if( hmmioFile != nullptr )
     {
         mmioClose( hmmioFile, 0 ); 
-        hmmioFile = NULL;
+        hmmioFile = nullptr;
     }
-    
+#endif
     return hr;
 }
 
 
-HRESULT CAudioStream::SaveWriteWaveData
+#if 0
+RESULT CAudioStream::SaveWriteWaveData
 ( 
   HMMIO hmmioFile
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
     
     // Descend into data chunk
     MMCKINFO ckOut;
@@ -334,3 +327,7 @@ HRESULT CAudioStream::SaveWriteWaveData
     
     return hr;
 }
+#endif
+
+
+RDH_BD_END_NAMESPACE

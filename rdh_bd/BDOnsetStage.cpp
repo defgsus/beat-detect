@@ -2,18 +2,13 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
-#include "BeatDetect.h"
 #include "BDOnsetStage.h"
 #include "BDOnsetDetect.h"
 #include "DSP.h"
 #include "BDUtils.h"
 
-#ifdef _DEBUG
-#undef THIS_FILE
-static char THIS_FILE[]=__FILE__;
-#define new DEBUG_NEW
-#endif
+RDH_BD_BEGIN_NAMESPACE
+
 
 //////////////////////////////////////////////////////////////////////
 // Filters
@@ -145,7 +140,8 @@ FILTER_6TH_COEFF aIIR_BAND_FILTERS[NUM_BANDS] =
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CBDOnsetStage::CBDOnsetStage()
+CBDOnsetStage::CBDOnsetStage(const BDParamsType& params)
+    : m_params      (params)
 {
 
 }
@@ -160,7 +156,7 @@ CBDOnsetStage::~CBDOnsetStage()
 // Processing
 //////////////////////////////////////////////////////////////////////
 
-HRESULT CBDOnsetStage::CreateOnsetStream
+RESULT CBDOnsetStage::CreateOnsetStream
 ( 
     CAudioStream *pStrmIn, 
     CDataStream *pStrmOut,
@@ -170,12 +166,12 @@ HRESULT CBDOnsetStage::CreateOnsetStream
     if( !pStrmIn->IsValid() )
         return E_INVALIDARG;
 
-    HRESULT hr = E_FAIL;
+    RESULT hr = E_FAIL;
 
     ////////////////////////////////////
     // BandPass Filter the input audio and detect onsets
     
-    CBDOnsetDetect OnsetDetect;
+    CBDOnsetDetect OnsetDetect(m_params);
 
     for( INT32 ii=NUM_BANDS-1; ii>=0; ii-- )
     {
@@ -199,7 +195,7 @@ HRESULT CBDOnsetStage::CreateOnsetStream
 
 
 // Split the input signal into its separate frequency bands
-HRESULT CBDOnsetStage::BandSplitInput
+RESULT CBDOnsetStage::BandSplitInput
 ( 
     CAudioStream *pStrmIn 
 )
@@ -209,12 +205,12 @@ HRESULT CBDOnsetStage::BandSplitInput
 
 
 // Reassemble onset streams into one output stream
-HRESULT CBDOnsetStage::ReassembleOnsets
+RESULT CBDOnsetStage::ReassembleOnsets
 ( 
     CDataStream *pStrmOut 
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     // Stream out is same format as all onset streams
     pStrmOut->CreateData( &m_aStrmOnset[0] );
@@ -237,7 +233,7 @@ HRESULT CBDOnsetStage::ReassembleOnsets
         pflDataOut[iSam] = flTotal;
     }
 
-    INT32 nMinOnsetDist = (INT32)(g_BDParams.flOnsetCombineMinDist * pStrmOut->GetSampleRate());
+    INT32 nMinOnsetDist = (INT32)(m_params.flOnsetCombineMinDist * pStrmOut->GetSampleRate());
 
     //////
     // Filter union of onsets to remove weaker/too close onsets
@@ -274,7 +270,7 @@ HRESULT CBDOnsetStage::ReassembleOnsets
     // Filter union of onsets to remove weaker/too close onsets
     // Option 3: Sparse - always start search from strongest onset nMinOnsetDist forward
     // restarting search if a stronger onset is found
-    for( iSam=0; iSam<pStrmOut->GetNumSamples(); iSam++ )
+    for(INT32 iSam=0; iSam<pStrmOut->GetNumSamples(); iSam++ )
     {
         // Found an onset?
         if( pflDataOut[iSam] > 0 )
@@ -297,7 +293,7 @@ HRESULT CBDOnsetStage::ReassembleOnsets
             }
             // Set one offset at best location found
 /*      
-            if( flMaxOnset >= g_BDParams.flOnsetCombineMinOnset )
+            if( flMaxOnset >= m_params.flOnsetCombineMinOnset )
                 pflDataOut[iSamMax] = 1;//flMaxOnset;
             else
                 pflDataOut[iSamMax] = 0.5f;
@@ -307,3 +303,5 @@ HRESULT CBDOnsetStage::ReassembleOnsets
     }
     return hr;
 }
+
+RDH_BD_END_NAMESPACE

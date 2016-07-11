@@ -1,69 +1,104 @@
 
+#ifndef RDHSRC_BD_BDUTILS_H
+#define RDHSRC_BD_BDUTILS_H
 
-#ifndef __BDUTILS_H__
-#define __BDUTILS_H__
+#include <cstdint>
+#include <cassert>
+
+#define ASSERT(arg__) assert(arg__)
+
+#define RDH_BD_BEGIN_NAMESPACE namespace RDH_BD {
+#define RDH_BD_END_NAMESPACE }
+
+
+RDH_BD_BEGIN_NAMESPACE
+
+typedef bool BOOL;
+typedef uint8_t BYTE;
+typedef int32_t INT32;
+typedef float FLOAT;
+typedef double DOUBLE;
+
+const BOOL TRUE = true;
+const BOOL FALSE = false;
+
+enum RESULT
+{
+    S_OK = 0,
+    S_FAIL = 1,
+    E_FAIL,
+    E_OUTOFMEMORY,
+    E_INVALIDARG,
+    S_FALSE
+};
+
+bool FAILED(RESULT);
 
 // BeatDetect Parameters
-typedef struct
+struct BDParamsType
 {
+    /** Initialize with default settings */
+    void init();
+
     // Onset Detection:
-    //   Onset detection minimum onset distance
-    //   Onset detection threshold top and bottom levels for hysteresis
+    /// Onset detection minimum onset distance
     FLOAT   flOnsetDetectResetTime;
+    /// Onset detection threshold top and bottom levels for hysteresis
     FLOAT   flOnsetDetectThreshLow, flOnsetDetectThreshHigh;
 
     // Onset Detection and Assembly:
-    //   Min onset distance
-    //   Minimum threshold for onset output
+    ///  Min onset distance
     FLOAT   flOnsetCombineMinDist;
+    ///  Minimum threshold for onset output
     FLOAT   flOnsetCombineMinOnset;
 
-    // Onset Stream Output Sampling Rate
+    /// Onset Stream Output Sampling Rate
     INT32   nOnsetSamplingRate;
 
-    // Maximum difference in node periods that consitutes an identical node
+    /// Maximum difference in node periods that consitutes an identical node
     FLOAT   flNodeMaxDiff;
     
     // Variable Sampler
-    //   Starting Sample Period
-    //   Ratio of previous error vs current error for input to PD Controller
-    //   Proportional and Differential Gains for the PD Controller
+    ///   Starting Sample Period
+    ///   Ratio of previous error vs current error for input to PD Controller
+    ///   Proportional and Differential Gains for the PD Controller
     BOOL    fEnableVarSampler;
     FLOAT   flVarSamplerStartPeriod;
     FLOAT   flVarSamplerMaxErrorTime;
     FLOAT   flExpectationStdDevSamples;
     FLOAT   flExpectationDeviancePercent;
     FLOAT   flVarSamplerGainProp, flVarSamplerGainDiff;
-    //   Fuzzy onset triangle distribution width
+    ///  Fuzzy onset triangle distribution width
     FLOAT   flFuzzyOnsetWidth;
 
     // Timing Nets:
-    //   Loop initial/min value
-    //   Loop max value
+    ///  Loop initial/min value
     FLOAT   flLoopInitValue;
+    ///  Loop max value
     FLOAT   flLoopMaxValue;
 
     // CSN:
-    //   Alpha and Beta constants for the CSN linkage parameters
-    //   CSN decay rate
-    //   Minimum and maximum activation allowed
-    //   Threshold multiplier for determining the top output from the CSN - Option 1
-    //   Threshold in seconds for how long a loop must have max CSN output to be selected - Option 2
+    /// Alpha and Beta constants for the CSN linkage parameters
     FLOAT   flCSNAlpha;
     FLOAT   flCSNMinLink, flCSNMaxLink;
     FLOAT   flCSNInputLink;
+    /// CSN decay rate
     FLOAT   flCSNDecay;
+    /// Minimum and maximum activation allowed
     FLOAT   flCSNMinAct, flCSNMaxAct;
+    /// Threshold multiplier for determining the top output from the CSN - Option 1
+    /// Threshold in seconds for how long a loop must have max CSN
+    /// output to be selected - Option 2
     FLOAT   flCSNOutputTimeThresh;  // Option 2
 
     // Beat Detection Logic
-    //   Threshold percentage between mean and max loop value to output beats (Option 1)
+    /// Threshold percentage between mean and max loop value to output beats (Option 1)
     FLOAT   flBeatOutputMinThresh;
 
     // IOI Statistics Collector: 
-    //   max onset tracking time, histogram halflife
-    //   dominant IOI list threshold low and high
+    /// max onset tracking time, histogram halflife
     FLOAT   flIOIMaxOnsetTime, flIOIHistHalflife;
+    /// dominant IOI list threshold low and high
     FLOAT   flIOIDomThreshRatio;
 
     // Performance Measures
@@ -71,17 +106,10 @@ typedef struct
     FLOAT   flTrackBeginOffset;
     INT32   nTrackChangeNode;
 
-} BDParamsType;
-
-extern BDParamsType  g_BDParams;
-
-HRESULT InitializeSettings();
-
-
-// Helper Macros
-#define BOUND(x,l,u)    min(max(x,l),u)
+};
 
 
 
+RDH_BD_END_NAMESPACE
 
-#endif
+#endif // RDHSRC_BD_BDUTILS_H

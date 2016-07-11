@@ -2,13 +2,13 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_DSP_H__8A1F1D34_9930_437A_ACC1_4638DA9FFA6C__INCLUDED_)
-#define AFX_DSP_H__8A1F1D34_9930_437A_ACC1_4638DA9FFA6C__INCLUDED_
+#ifndef RDHSRC_DSP_H
+#define RDHSRC_DSP_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#include "BDUtils.h"
+#include "DataStream.h"
 
+RDH_BD_BEGIN_NAMESPACE
 
 typedef struct
 {
@@ -27,18 +27,18 @@ public:
 	virtual ~CDSP();
 
     // IIR Filter with A,B coefficients
-    static  HRESULT DF2_Filter6( CDataStream* pStrmIn, CDataStream* pStrmOut, 
+    static  RESULT DF2_Filter6( CDataStream* pStrmIn, CDataStream* pStrmOut,
                                  FILTER_6TH_COEFF* pCoeff, BOOL fReverseGroupDelay = FALSE );
     
-    static HRESULT RMSDecimate( CDataStream *pStrmIn, CDataStream *pStrmOut, INT32 nDec );
+    static RESULT RMSDecimate( CDataStream *pStrmIn, CDataStream *pStrmOut, INT32 nDec );
 	
-    static HRESULT Convolve( CDataStream *pStrmIn, CDataStream *pStrmOut, const FLOAT aflKernel[], const INT32 nKernelLen );
+    static RESULT Convolve( CDataStream *pStrmIn, CDataStream *pStrmOut, const FLOAT aflKernel[], const INT32 nKernelLen );
 
-    static HRESULT Mix( CDataStream *pStrmIn1, FLOAT flVol1, CDataStream *pStrmIn2, FLOAT flVol2, CDataStream *pStrmOut );
+    static RESULT Mix( CDataStream *pStrmIn1, FLOAT flVol1, CDataStream *pStrmIn2, FLOAT flVol2, CDataStream *pStrmOut );
  
 };
 
 
+RDH_BD_END_NAMESPACE
 
-
-#endif // !defined(AFX_DSP_H__8A1F1D34_9930_437A_ACC1_4638DA9FFA6C__INCLUDED_)
+#endif // RDHSRC_DSP_H

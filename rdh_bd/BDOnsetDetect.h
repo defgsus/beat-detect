@@ -2,26 +2,30 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_BDONSETDETECT_H__DBB5F21C_EB79_4C07_8780_C0B523BD5581__INCLUDED_)
-#define AFX_BDONSETDETECT_H__DBB5F21C_EB79_4C07_8780_C0B523BD5581__INCLUDED_
+#ifndef RDHSRC_BDONSETDETECT_H
+#define RDHSRC_BDONSETDETECT_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#include "AudioStream.h"
+
+RDH_BD_BEGIN_NAMESPACE
 
 class CBDOnsetDetect  
 {
 public:
-	CBDOnsetDetect();
+    CBDOnsetDetect(const BDParamsType& params);
 	virtual ~CBDOnsetDetect();
 
-    HRESULT CreateOnsetStream( CAudioStream *pStrmIn, CDataStream *pStrmOut, CDataStream *pStrmInternal );
+    RESULT CreateOnsetStream( CAudioStream *pStrmIn, CDataStream *pStrmOut, CDataStream *pStrmInternal );
 
 protected:
-	HRESULT ThresholdStream( CDataStream *pStrmIn, CDataStream *pStrmEnv, CDataStream *pStrmOut );
+	RESULT ThresholdStream( CDataStream *pStrmIn, CDataStream *pStrmEnv, CDataStream *pStrmOut );
 	
-	HRESULT ProcessEnvelope( CDataStream *pStrmIn, CDataStream *pStrmOut );
+	RESULT ProcessEnvelope( CDataStream *pStrmIn, CDataStream *pStrmOut );
 
+
+    BDParamsType m_params;
 };
 
-#endif // !defined(AFX_BDONSETDETECT_H__DBB5F21C_EB79_4C07_8780_C0B523BD5581__INCLUDED_)
+RDH_BD_END_NAMESPACE
+
+#endif // RDHSRC_BDONSETDETECT_H

@@ -2,14 +2,14 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_BDTIMINGNET_H__CEE77B31_8F62_4CE0_81EF_1F5FFF2DC3D8__INCLUDED_)
-#define AFX_BDTIMINGNET_H__CEE77B31_8F62_4CE0_81EF_1F5FFF2DC3D8__INCLUDED_
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
-
+#ifndef BDHSRC_BDNODETIMINGNET_H
+#define BDHSRC_BDNODETIMINGNET_H
 
 #include <list>
+
+#include "BDUtils.h"
+
+RDH_BD_BEGIN_NAMESPACE
 
 typedef std::list<FLOAT> TimingLoopList;
 
@@ -22,10 +22,10 @@ public:
 	CBDNodeTimingNet( CBDNode * pNode );
 	virtual ~CBDNodeTimingNet();
 
-    HRESULT     Initialize( INT32 nLoopLen );
+    RESULT     Initialize( INT32 nLoopLen );
     
     // Timing Net Execution
-    HRESULT     ExecuteStep( FLOAT flInput );
+    RESULT     ExecuteStep( FLOAT flInput );
 
     // Beat Output Methods
     FLOAT       BeatOutputPrediction()      { return m_flBeatOutputPrediction; }
@@ -44,6 +44,8 @@ public:
 protected:
     
     void            UpdateLoopStats();
+
+    BDParamsType        m_params;
 
     // Timing Net
     TimingLoopList      m_lstNet;
@@ -71,4 +73,6 @@ protected:
     
 };
 
-#endif // !defined(AFX_BDTIMINGNET_H__CEE77B31_8F62_4CE0_81EF_1F5FFF2DC3D8__INCLUDED_)
+RDH_BD_END_NAMESPACE
+
+#endif // BDHSRC_BDNODETIMINGNET_H

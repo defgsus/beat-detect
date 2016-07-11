@@ -2,32 +2,36 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
-#include "BeatDetect.h"
+#include <cmath>
+
 #include "BDNodeTimingNet.h"
 #include "BDNode.h"
 #include "BDUtils.h"
-#include <math.h>
 
-
-#ifdef _DEBUG
-#undef THIS_FILE
-static char THIS_FILE[]=__FILE__;
-#define new DEBUG_NEW
-#endif
+RDH_BD_BEGIN_NAMESPACE
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CBDNodeTimingNet::CBDNodeTimingNet( CBDNode * pNode ) : m_pNode(pNode),
-                               m_nLoopLen(0), m_flIntegrator(0),
-                               m_iLoopLoc(0),
-                               m_flLoopMax(0), m_flLoopEnergy(0), m_flLoopMean(0), m_flBeatThresh((FLOAT)INT_MAX),
-                               m_flBeatOutputPrediction(0),
-                               m_iBeatLoc(-1), m_iCandidateLoc(-1), m_nBeatLife(0), m_flBeatStrength(0)
+CBDNodeTimingNet::CBDNodeTimingNet( CBDNode * pNode )
+    : m_flBeatStrength(0)
+    , m_nLoopLen(0)
+    , m_flIntegrator(0)
+    , m_iLoopLoc(0)
+    , m_flBeatThresh((FLOAT)(1<<30))
+    , m_flLoopMean(0)
+    , m_flLoopEnergy(0)
+    , m_flLoopMax(0)
+    , m_flBeatOutputPrediction(0)
+    , m_iBeatLoc(-1)
+    , m_iCandidateLoc(-1)
+    , m_nBeatLife(0)
+    , m_pNode(pNode)
+
 {
-    
+    if (m_pNode)
+        m_params = m_pNode->parameters();
 }
 
 CBDNodeTimingNet::~CBDNodeTimingNet()
@@ -36,7 +40,7 @@ CBDNodeTimingNet::~CBDNodeTimingNet()
 }
 
 
-HRESULT CBDNodeTimingNet::Initialize
+RESULT CBDNodeTimingNet::Initialize
 ( 
     INT32 nLoopLen
 )
@@ -48,7 +52,7 @@ HRESULT CBDNodeTimingNet::Initialize
     m_nLoopLen = nLoopLen;
     for( INT32 ii=0; ii < m_nLoopLen; ii++ )
     {
-        m_lstNet.push_front( g_BDParams.flLoopInitValue );
+        m_lstNet.push_front( m_params.flLoopInitValue );
     } 
 
     //////
@@ -60,7 +64,7 @@ HRESULT CBDNodeTimingNet::Initialize
 
 
 
-HRESULT CBDNodeTimingNet::ExecuteStep
+RESULT CBDNodeTimingNet::ExecuteStep
 ( 
     FLOAT   flInput
 )
@@ -73,7 +77,7 @@ HRESULT CBDNodeTimingNet::ExecuteStep
     else
     {
         flInput = flInput - 0.05f;
-        flInput = min(flInput, 1.0f);
+        flInput = std::min(flInput, 1.0f);
     }
 
     ////////////////////////////////
@@ -83,8 +87,8 @@ HRESULT CBDNodeTimingNet::ExecuteStep
     FLOAT flOldValue = m_lstNet.front();
 
     flNewValue = flOldValue + flInput * flOldValue * (1 - flOldValue);
-    flNewValue = max( flNewValue, g_BDParams.flLoopInitValue );
-    flNewValue = min( flNewValue, g_BDParams.flLoopMaxValue );
+    flNewValue = std::max( flNewValue, m_params.flLoopInitValue );
+    flNewValue = std::min( flNewValue, m_params.flLoopMaxValue );
 
     m_lstNet.pop_front();
     m_lstNet.push_back( flNewValue );   
@@ -98,8 +102,8 @@ HRESULT CBDNodeTimingNet::ExecuteStep
 
     UpdateLoopStats();
 
-    //m_flBeatThresh = m_flLoopMean * (1-g_BDParams.flBeatOutputThresh) + m_flLoopMax * g_BDParams.flBeatOutputThresh;    
-    //m_flBeatThresh = max(m_flBeatThresh, g_BDParams.flBeatOutputMinThresh );
+    //m_flBeatThresh = m_flLoopMean * (1-m_params.flBeatOutputThresh) + m_flLoopMax * m_params.flBeatOutputThresh;    
+    //m_flBeatThresh = max(m_flBeatThresh, m_params.flBeatOutputMinThresh );
     ////////////////////////////////////
 
 
@@ -174,7 +178,7 @@ void CBDNodeTimingNet::GenerateBeatOutput()
     if( m_iBeatLoc == -1 )
     {
         // No beat location exists, assign maximum
-        if( (*iterBeat == m_flLoopMax) && (*iterBeat > g_BDParams.flLoopInitValue) )
+        if( (*iterBeat == m_flLoopMax) && (*iterBeat > m_params.flLoopInitValue) )
         {
             m_iBeatLoc = LoopLength();
             m_flBeatOutputPrediction = *iterBeat;
@@ -214,3 +218,5 @@ void CBDNodeTimingNet::GenerateBeatOutput()
 
     //m_flBeatOutputPrediction = *iterBeat;
 }
+
+RDH_BD_END_NAMESPACE

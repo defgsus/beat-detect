@@ -2,16 +2,18 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
+#include <cstring> // memset
+
 #include "DataStream.h"
 
+RDH_BD_BEGIN_NAMESPACE
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
 
-CDataStream::CDataStream() : m_pData(NULL), m_nSamples(0), m_nChannels(1)
+CDataStream::CDataStream() : m_pData(nullptr), m_nSamples(0), m_nChannels(1)
 {
     
 }
@@ -25,16 +27,16 @@ CDataStream::~CDataStream()
 
 void CDataStream::ReleaseData()
 {
-    if( m_pData != NULL )
+    if( m_pData != nullptr )
     {
         delete[] m_pData;
-        m_pData = NULL;
+        m_pData = nullptr;
         m_nSamples = 0;
     }
 }
 
 
-HRESULT CDataStream::CreateData
+RESULT CDataStream::CreateData
 ( 
     INT32 nBitsPerSample, 
     INT32 nSampleRate, 
@@ -52,7 +54,7 @@ HRESULT CDataStream::CreateData
         return E_INVALIDARG;
 
     m_pData = new BYTE[nSamples * (nBitsPerSample/8)];
-    if( m_pData != NULL )
+    if( m_pData != nullptr )
     {
         m_nBitsPerSample = nBitsPerSample;
         m_nSampleRate = nSampleRate;
@@ -65,12 +67,12 @@ HRESULT CDataStream::CreateData
 }
 
 
-HRESULT CDataStream::CreateData
+RESULT CDataStream::CreateData
 ( 
     CDataStream const *pDataStreamCopyFrom 
 )
 {
-    if( NULL != pDataStreamCopyFrom )
+    if( nullptr != pDataStreamCopyFrom )
         return CreateData( pDataStreamCopyFrom->GetBitsPerSample(),
                            pDataStreamCopyFrom->GetSampleRate(), 
                            pDataStreamCopyFrom->GetNumSamples(),
@@ -82,7 +84,7 @@ HRESULT CDataStream::CreateData
 
 
 // Reallocate stream to new length - shorter or longer, pads with zeros
-HRESULT CDataStream::Reallocate
+RESULT CDataStream::Reallocate
 (   
     INT32 nSamples 
 )
@@ -91,7 +93,7 @@ HRESULT CDataStream::Reallocate
     if( nSamples == m_nSamples )
         return S_OK;
 
-    HRESULT hr = E_FAIL;
+    RESULT hr = E_FAIL;
 
     if( nSamples < m_nSamples )
     {
@@ -102,8 +104,8 @@ HRESULT CDataStream::Reallocate
     }
     else
     {
-        LPVOID pData = new BYTE[nSamples * (m_nBitsPerSample/8)];
-        if( pData != NULL )
+        void* pData = new BYTE[nSamples * (m_nBitsPerSample/8)];
+        if( pData != nullptr )
         {
             // Copy over data and pad end with zeros - not quite efficient but who cares...
             memset( pData, 0, nSamples*(m_nBitsPerSample/8) );
@@ -123,15 +125,15 @@ HRESULT CDataStream::Reallocate
 }
 
 
-HRESULT CDataStream::Normalize()
+RESULT CDataStream::Normalize()
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     if( IsNormalized() || !IsValid() )
         return E_FAIL;
 
     FLOAT * pflData = new FLOAT[GetNumSamples()];
-    if( pflData != NULL )
+    if( pflData != nullptr )
     {
         BOOL fSuccess = FALSE;
         if( GetBitsPerSample() == 16 )
@@ -172,18 +174,18 @@ HRESULT CDataStream::Normalize()
 }
 
 
-HRESULT CDataStream::DeNormalize
+RESULT CDataStream::DeNormalize
 ( 
     INT32 nBitsPerSample 
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     if( !IsNormalized() || !IsValid() )
         return E_FAIL;
 
-    LPVOID pData = new BYTE[GetNumSamples() * (nBitsPerSample/8)];
-    if( pData != NULL )
+    void* pData = new BYTE[GetNumSamples() * (nBitsPerSample/8)];
+    if( pData != nullptr )
     {
         BOOL fSuccess = FALSE;
         if( nBitsPerSample == 16 )
@@ -222,3 +224,5 @@ HRESULT CDataStream::DeNormalize
 
     return hr;
 }
+
+RDH_BD_END_NAMESPACE

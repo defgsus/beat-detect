@@ -2,17 +2,12 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
-#include <math.h>
-#include "BeatDetect.h"
+#include <cmath>
+#include <algorithm>
+
 #include "DSP.h"
 
-#ifdef _DEBUG
-#undef THIS_FILE
-static char THIS_FILE[]=__FILE__;
-#define new DEBUG_NEW
-#endif
-
+RDH_BD_BEGIN_NAMESPACE
 
 // ****************************************************************
 // NOTE: THIS CODE ASSUMES THE DATA IS NORMALIZED - FLOATING POINT
@@ -47,7 +42,7 @@ CDSP::~CDSP()
 //
 #pragma optimize( "atp", on )
 
-HRESULT CDSP::DF2_Filter6
+RESULT CDSP::DF2_Filter6
 ( 
     CDataStream* pStrmIn, 
     CDataStream* pStrmOut, 
@@ -55,7 +50,7 @@ HRESULT CDSP::DF2_Filter6
     BOOL fReverseGroupDelay
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     if( !pStrmIn->IsNormalized() )
         return E_INVALIDARG;
@@ -138,7 +133,7 @@ HRESULT CDSP::DF2_Filter6
 // Convolution by a variable length kernel
 #pragma optimize( "atp", on )
 
-HRESULT CDSP::Convolve
+RESULT CDSP::Convolve
 (
     CDataStream *pStrmIn, 
     CDataStream *pStrmOut, 
@@ -146,7 +141,7 @@ HRESULT CDSP::Convolve
     const INT32 nKernelLen
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     if( !pStrmIn->IsNormalized() )
         return E_INVALIDARG;
@@ -166,8 +161,8 @@ HRESULT CDSP::Convolve
     for( INT32 iSam=0; iSam<pStrmOut->GetNumSamples(); iSam++ )
     {
         FLOAT flOutput = 0;
-        INT32 iLeftLimit = max(iSam-nKernelLen+1, 0);
-        INT32 iRightLimit = min(iSam+1, pStrmIn->GetNumSamples());
+        INT32 iLeftLimit = std::max(iSam-nKernelLen+1, 0);
+        INT32 iRightLimit = std::min(iSam+1, pStrmIn->GetNumSamples());
         for( INT32 iK=iLeftLimit; iK < iRightLimit; iK++ )
         {
             flOutput += (FLOAT)(pflDataIn[iK] * aflKernel[iSam-iK]);
@@ -183,14 +178,14 @@ HRESULT CDSP::Convolve
 // Root-Mean-Square Decimate signal
 #pragma optimize( "atp", on )
 
-HRESULT CDSP::RMSDecimate
+RESULT CDSP::RMSDecimate
 (   
     CDataStream *pStrmIn, 
     CDataStream *pStrmOut, 
     INT32 nDec
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     if( !pStrmIn->IsNormalized() )
         return E_INVALIDARG;
@@ -222,14 +217,14 @@ HRESULT CDSP::RMSDecimate
     FLOAT * pflDataTemp = (FLOAT *)strmTemp.GetData();
 
     // Root and Decimate the signal
-    for( iSam=0; iSam<pStrmOut->GetNumSamples(); iSam++ )
+    for(INT32 iSam=0; iSam<pStrmOut->GetNumSamples(); iSam++ )
     {
         FLOAT flResult = 0;
-        INT32 iRightLimit = min((iSam+1)*nDec, strmTemp.GetNumSamples());
+        INT32 iRightLimit = std::min((iSam+1)*nDec, strmTemp.GetNumSamples());
         
         for( INT32 ii=iSam*nDec; ii < iRightLimit; ii++ )
         {
-            flResult += (FLOAT)sqrt( max(pflDataTemp[ii],0) );
+            flResult += std::sqrt( std::max(pflDataTemp[ii], FLOAT(0)) );
         }
         
         pflDataOut[iSam] = flResult/nDec;
@@ -257,7 +252,7 @@ HRESULT CDSP::RMSDecimate
 
 #pragma optimize( "atp", on )
 
-HRESULT CDSP::Mix
+RESULT CDSP::Mix
 (
     CDataStream *pStrmIn1, 
     FLOAT flVol1, 
@@ -271,9 +266,9 @@ HRESULT CDSP::Mix
     if( pStrmIn1->GetSampleRate() != pStrmIn2->GetSampleRate() )
         return E_INVALIDARG;
 
-    INT32 nSamples = min( pStrmIn1->GetNumSamples(), pStrmIn2->GetNumSamples() );
+    INT32 nSamples = std::min( pStrmIn1->GetNumSamples(), pStrmIn2->GetNumSamples() );
 
-    HRESULT hr;
+    RESULT hr;
     hr = pStrmOut->CreateData( pStrmIn1->GetBitsPerSample(), pStrmIn1->GetSampleRate(), nSamples, TRUE );
     if( FAILED(hr) )
         return hr;
@@ -289,3 +284,6 @@ HRESULT CDSP::Mix
 
     return hr;
 }
+
+
+RDH_BD_END_NAMESPACE

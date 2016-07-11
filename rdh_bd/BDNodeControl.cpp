@@ -2,26 +2,24 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
-#include "BeatDetect.h"
+#include <cmath>
+
 #include "BDNodeControl.h"
 #include "BDNode.h"
 #include "BDNodeCSN.h"
 #include "BDUtils.h"
-#include <math.h>
 
-#ifdef _DEBUG
-#undef THIS_FILE
-static char THIS_FILE[]=__FILE__;
-#define new DEBUG_NEW
-#endif
+
+RDH_BD_BEGIN_NAMESPACE
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CBDNodeControl::CBDNodeControl() : m_flMaxCSN(-1), m_pNodeBest(NULL),
-                                   m_flMaxCSNTimeout(0)
+CBDNodeControl::CBDNodeControl()
+    : m_pNodeBest           (nullptr)
+    , m_flMaxCSN            (-1)
+    , m_flMaxCSNTimeout     (0)
 {
 
 }
@@ -31,7 +29,7 @@ CBDNodeControl::~CBDNodeControl()
     NodeList::iterator iter = m_lstNodes.begin();
     while( iter != m_lstNodes.end() )
     {
-        if( NULL != *iter )
+        if( nullptr != *iter )
             delete *iter;
         iter++;
     }
@@ -39,10 +37,10 @@ CBDNodeControl::~CBDNodeControl()
 }
 
 
-HRESULT CBDNodeControl::Initialize
-( 
-)
+RESULT CBDNodeControl::Initialize(const BDParamsType& params)
 {
+    m_params = params;
+
     // Reset list of nets
     m_lstNodes.clear();
 
@@ -51,13 +49,13 @@ HRESULT CBDNodeControl::Initialize
 
 
 //
-HRESULT CBDNodeControl::ExecuteStep
+RESULT CBDNodeControl::ExecuteStep
 ( 
     FLOAT *     pflInputBuffer, 
     sIOIStats * pStats
 )
 {
-    HRESULT hr = S_OK;
+    RESULT hr = S_OK;
 
     //////////////////////////////////////////////////////////////////
     // REMOVE, ADJUST and MARK
@@ -77,7 +75,7 @@ HRESULT CBDNodeControl::ExecuteStep
             // If found a Node with a similar period (within tolerance)
             // we've found a match, so don't remove this node and clear
             // the similar node period entry from the dominant list
-            if( fabs((*iNode)->Period() - (*iDom).flPeriod) < g_BDParams.flNodeMaxDiff )
+            if( fabs((*iNode)->Period() - (*iDom).flPeriod) < m_params.flNodeMaxDiff )
             {
                 // Mark found, also find highest csn output
                 fFound = TRUE;
@@ -108,7 +106,7 @@ HRESULT CBDNodeControl::ExecuteStep
             (*iterTemp)->CSN()->FlushCSNLinks();
             if( m_pNodeBest == (*iterTemp) )
             {
-                m_pNodeBest = NULL;
+                m_pNodeBest = nullptr;
             }
 
             delete *iterTemp;
@@ -147,7 +145,7 @@ HRESULT CBDNodeControl::ExecuteStep
             // More than one reference, remove all but most energetic node
             for( iNode = m_lstNodes.begin(); iNode != m_lstNodes.end(); )
             {
-                if( fabs((*iNode)->Period() - (*iDom).flPeriod) < g_BDParams.flNodeMaxDiff )
+                if( fabs((*iNode)->Period() - (*iDom).flPeriod) < m_params.flNodeMaxDiff )
                 {
                     // Matching node to dominant IOI, is highest energy?
                     if( (*iNode)->CSNOutput() < (*iDom).flHighestEnergy )
@@ -194,8 +192,8 @@ HRESULT CBDNodeControl::ExecuteStep
 
     
     // Commit Step - Lock in CSN updated values, find top CSN Output
-    CBDNode *  pNodeBestCandidate = NULL;
-    FLOAT flMaxCSN = g_BDParams.flCSNMinAct;
+    CBDNode *  pNodeBestCandidate = nullptr;
+    FLOAT flMaxCSN = m_params.flCSNMinAct;
 
     for( iNode = m_lstNodes.begin(); iNode != m_lstNodes.end() ; iNode++ )
     {   
@@ -228,28 +226,28 @@ HRESULT CBDNodeControl::ExecuteStep
     ////////////
     // Option 2
     ////////////
-    if( NULL != pNodeBestCandidate && NULL == m_pNodeBest )
+    if( nullptr != pNodeBestCandidate && nullptr == m_pNodeBest )
     {
         m_pNodeBest = pNodeBestCandidate;
     }
 
     // Output CSN results to parent
-    if( (NULL != m_pNodeBest) && (NULL != pNodeBestCandidate) )
+    if( (nullptr != m_pNodeBest) && (nullptr != pNodeBestCandidate) )
     {
         if( m_pNodeBest != pNodeBestCandidate )
         {
             // Current max has been superceded, increment timeout
-            m_flMaxCSNTimeout += (FLOAT)1 / g_BDParams.nOnsetSamplingRate;
+            m_flMaxCSNTimeout += (FLOAT)1 / m_params.nOnsetSamplingRate;
             // Timeout - new top candidate becomes max loop
-            if( m_flMaxCSNTimeout > g_BDParams.flCSNOutputTimeThresh )
+            if( m_flMaxCSNTimeout > m_params.flCSNOutputTimeThresh )
             {
                 m_pNodeBest->m_fSelected = FALSE;
                 m_pNodeBest = pNodeBestCandidate;
                 m_flMaxCSNTimeout = 0;
                 
                 // Count the number of times we choose a new node
-                if( g_BDParams.fTrackPerformance )
-                    g_BDParams.nTrackChangeNode++;    
+                if( m_params.fTrackPerformance )
+                    m_params.nTrackChangeNode++;    
             }
         }
         else
@@ -259,7 +257,7 @@ HRESULT CBDNodeControl::ExecuteStep
         }
     }
 
-    if( m_pNodeBest != NULL && g_BDParams.fTrackPerformance )
+    if( m_pNodeBest != nullptr && m_params.fTrackPerformance )
         m_pNodeBest->m_fSelected = TRUE;
 
     return hr;
@@ -267,21 +265,22 @@ HRESULT CBDNodeControl::ExecuteStep
 
 
 // Insert new timing net and create links to all other nets
-HRESULT CBDNodeControl::AddNode
+RESULT CBDNodeControl::AddNode
 ( 
     FLOAT flNodePeriod
 )
 {
-    HRESULT hr = E_OUTOFMEMORY;
+    RESULT hr = E_OUTOFMEMORY;
 
     CBDNode *pNode = new CBDNode;
-    if( NULL != pNode )
+    if( nullptr != pNode )
     {
         // Init
-        hr = pNode->Initialize( flNodePeriod );             
+        hr = pNode->Initialize( m_params, flNodePeriod );
 
         // Create Links
-        for( NodeList::iterator iter = m_lstNodes.begin(); iter != m_lstNodes.end() ; iter++ )
+        for( NodeList::iterator iter = m_lstNodes.begin();
+             iter != m_lstNodes.end() ; iter++ )
         {
             // Add link between new Net and existing Nets
             pNode->CSN()->AddCSNLink( *iter );
@@ -295,3 +294,6 @@ HRESULT CBDNodeControl::AddNode
     return hr;
 }
 
+
+
+RDH_BD_END_NAMESPACE
