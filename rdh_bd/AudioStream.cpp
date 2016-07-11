@@ -2,6 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#include <iostream>
+
+#include <sndfile.h>
+
 #include "AudioStream.h"
 
 RDH_BD_BEGIN_NAMESPACE
@@ -19,91 +23,35 @@ CAudioStream::~CAudioStream()
 }
 
 
-RESULT CAudioStream::LoadFromWaveFile(const char*)
+RESULT CAudioStream::LoadFromFile(const char* fn)
 {
-    RESULT hr = S_OK;
-#if 0
     // Cannot load wave file if memory already allocated for another wave
     if( nullptr != m_pData )
         return E_FAIL;
 
-    HMMIO hmmioFile = mmioOpen( (LPTSTR)lpszFilename, nullptr, MMIO_ALLOCBUF | MMIO_READ );
-    if( hmmioFile == nullptr )
-        return E_FAIL;
-
-    // Read main RIFF
-    MMCKINFO ckInRIFF;
-    if( mmioDescend(hmmioFile, &ckInRIFF, nullptr, 0) == 0 )
+    SF_INFO info;
+    info.format = 0;
+    SNDFILE *f = sf_open(fn, SFM_READ, &info);
+    if (!f)
     {
-        // Check Type
-        if( (ckInRIFF.ckid == FOURCC_RIFF) &&
-            (ckInRIFF.fccType == mmioFOURCC('W', 'A', 'V', 'E')) ) 
-        {
-            //
-            // Descend into format chunk
-            //
-            MMCKINFO ckIn;
-            ckIn.ckid = mmioFOURCC('f', 'm', 't', ' ');     
-            if( mmioDescend(hmmioFile, &ckIn, &ckInRIFF, MMIO_FINDCHUNK) == 0 ) 
-            {
-                // Read format
-                PCMWAVEFORMAT   pcmWaveFormat;
-                if( mmioRead(hmmioFile, (HPSTR) &pcmWaveFormat, (long) sizeof(pcmWaveFormat)) == 
-                    (long) sizeof(pcmWaveFormat) )  
-                {
-                    //
-                    // Fill in Wave Data
-                    //
-                    m_nBitsPerSample = pcmWaveFormat.wBitsPerSample;
-                    m_nSampleRate = pcmWaveFormat.wf.nSamplesPerSec;
-                    m_nChannels = pcmWaveFormat.wf.nChannels;
-                    m_fNormalized = FALSE;
-
-                    if( mmioAscend(hmmioFile, &ckIn, 0) == 0 ) 
-                    {
-                        // No errors
-                    }
-                    else
-                    {
-                        hr = E_FAIL;
-                    }
-                }
-                else
-                {
-                    hr = E_FAIL;
-                }
-            }
-            else
-            {
-                hr = E_FAIL;
-            }
-
-            //
-            // Success, read data
-            //
-            if( SUCCEEDED(hr) )
-            {
-                hr = LoadReadWaveData( hmmioFile, &ckInRIFF );
-            }
-        }
-        else
-        {
-            hr = E_FAIL;
-        }
-    }
-    else
-    {
-        hr = E_FAIL;
+        std::cerr << "Could not open '" << fn << "'\n"
+                    << sf_strerror((SNDFILE*)0);
+        return S_FAIL;
     }
 
-    // Close File
-    if (hmmioFile != nullptr)
-    { 
-        mmioClose(hmmioFile, 0); 
-        hmmioFile = nullptr;
-    }
-#endif
-    return hr;
+    m_nChannels = info.channels;
+    m_nSampleRate = info.samplerate;
+    m_nBitsPerSample = 32;
+    m_nSamples = info.frames;
+    m_fNormalized = true;
+
+    m_pData = malloc(m_nSamples * m_nChannels * sizeof(FLOAT));
+
+    sf_readf_float(f, (FLOAT*)m_pData, m_nSamples);
+
+    sf_close(f);
+
+    return S_OK;
 }
 
 #if 0
@@ -179,7 +127,7 @@ RESULT CAudioStream::LoadReadWaveData
 }
 #endif
 
-RESULT CAudioStream::SaveToWaveFile(const char*)
+RESULT CAudioStream::SaveToFile(const char*)
 {
     RESULT hr = S_OK;
 #if 0

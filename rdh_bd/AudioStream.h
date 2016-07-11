@@ -15,13 +15,11 @@ public:
     CAudioStream();
     virtual ~CAudioStream();
     
-    RESULT LoadFromWaveFile( const char* );
-    RESULT SaveToWaveFile( const char* );
+    RESULT LoadFromFile( const char* );
+    RESULT SaveToFile( const char* );
         
 protected:
 
-    //RESULT LoadReadWaveData( HMMIO hmmioFile, LPMMCKINFO pckInRIFF );
-    //RESULT SaveWriteWaveData( HMMIO hmmioFile );
 };
 
 RDH_BD_END_NAMESPACE

@@ -5,6 +5,8 @@
 #ifndef RDHSRC_DATASTREAM_H
 #define RDHSRC_DATASTREAM_H
 
+#include <string>
+
 #include "BDUtils.h"
 
 RDH_BD_BEGIN_NAMESPACE
@@ -14,6 +16,8 @@ class CDataStream
 public:
     CDataStream();
     virtual ~CDataStream();
+
+    std::string infoString() const;
 
     // Create stream from existing stream or data
     virtual RESULT CreateData( INT32 nBitsPerSample, INT32 nSampleRate, INT32 nSamples, BOOL fNormalized = FALSE );

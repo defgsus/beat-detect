@@ -13,8 +13,9 @@ TEMPLATE = app
 
 CONFIG += C++11
 
-include(rdh_bd/rdh_bd.pri)
+LIBS += -lsndfile
 
+include(rdh_bd/rdh_bd.pri)
 
 SOURCES += main.cpp \
         mainwindow.cpp

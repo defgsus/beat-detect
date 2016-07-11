@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include <cstring> // memset
+#include <sstream>
 
 #include "DataStream.h"
 
@@ -13,7 +14,13 @@ RDH_BD_BEGIN_NAMESPACE
 //////////////////////////////////////////////////////////////////////
 
 
-CDataStream::CDataStream() : m_pData(nullptr), m_nSamples(0), m_nChannels(1)
+CDataStream::CDataStream()
+    : m_nChannels       (0)
+    , m_nBitsPerSample  (0)
+    , m_nSampleRate     (0)
+    , m_nSamples        (0)
+    , m_fNormalized     (false)
+    , m_pData           (nullptr)
 {
     
 }
@@ -24,6 +31,16 @@ CDataStream::~CDataStream()
     ReleaseData();
 }
 
+std::string CDataStream::infoString() const
+{
+    std::stringstream s;
+    s << GetNumChannels() << "ch";
+    if (GetSampleRate() > 0)
+        s << " @ " << GetSampleRate() << "Hz, secs=" << GetDuration();
+    s << ", sams= " << GetNumSamples();
+    s << ", bits=" << GetBitsPerSample();
+    return s.str();
+}
 
 void CDataStream::ReleaseData()
 {
